@@ -10,19 +10,58 @@ import {
 } from "./definitions.js";
 
 /**
+ * Checks whether a path segment starts with an FSD ordering prefix
+ * (a digit followed by underscore, or a standalone underscore).
+ *
+ * @param path - A file or folder name segment (e.g. `"2_entities"` or `"_shared"`).
+ * @returns `true` if the segment begins with an ordering prefix.
+ */
+function hasPrefix(path: string): boolean {
+  return /^([0-9]_|_)/.test(path);
+}
+
+/**
+ * Strips the FSD ordering prefix from a path segment.
+ *
+ * @param path - A file or folder name segment (e.g. `"2_entities"` or `"_shared"`).
+ * @returns The segment without the ordering prefix (e.g. `"entities"`, `"shared"`).
+ */
+function removePrefix(path: string): string {
+  return path.replace(/^([0-9]_|_)/, "");
+}
+
+/**
  * Extract layers from an FSD root.
  *
  * @returns A mapping of layer name to folder object.
  */
 export function getLayers(fsdRoot: Folder): Partial<Record<LayerName, Folder>> {
   return Object.fromEntries(
-    fsdRoot.children
-      .filter(
-        (child) =>
-          child.type === "folder" &&
-          layerSequence.includes(basename(child.path)),
-      )
-      .map((child) => [basename(child.path) as LayerName, child]),
+    fsdRoot.children.reduce(
+      (acc, child) => {
+        if (child.type !== "folder") {
+          return acc;
+        }
+
+        const name = basename(child.path);
+        const layer: LayerName | undefined =
+          layerSequence[layerSequence.indexOf(removePrefix(name))];
+        if (layer) {
+          const existingLayer = acc.find((el) => el[0] === layer);
+          if (!existingLayer) {
+            acc.push([layer, child]);
+          } else if (
+            hasPrefix(name) &&
+            !hasPrefix(basename(existingLayer[1].path))
+          ) {
+            acc.splice(acc.indexOf(existingLayer), 1, [layer, child]);
+          }
+        }
+
+        return acc;
+      },
+      [] as Array<[LayerName, Folder]>,
+    ),
   );
 }
 

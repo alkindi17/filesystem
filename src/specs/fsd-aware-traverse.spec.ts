@@ -10,8 +10,37 @@ import {
   isCrossImportPublicApi,
   type Folder,
   type File,
+  getLayers,
 } from "../index.js";
 import { joinFromRoot, parseIntoFolder } from "./prepare-test.js";
+
+describe("getLayers", () => {
+  test("prioritize prefixed layer over non-prefixed", () => {
+    const root = parseIntoFolder(`
+      📂 pages
+        📄 home.tsx
+      📂 _pages
+        📂 home
+          📄 index.ts
+    `);
+    expect(getLayers(root)).toEqual({ pages: root.children[1] as Folder });
+  });
+
+  test("accept prefixed layers", () => {
+    const root = parseIntoFolder(`
+      📂 6_shared
+        📂 ui
+          📄 Button.tsx
+      📂 _pages
+        📂 home
+          📄 index.ts
+    `);
+    expect(getLayers(root)).toEqual({
+      shared: root.children[0] as Folder,
+      pages: root.children[1] as Folder,
+    });
+  });
+});
 
 test("getSlices", () => {
   const rootFolder = parseIntoFolder(`
