@@ -184,9 +184,8 @@ export function getAllSegments(fsdRoot: Folder): Array<{
  * Only layers Shared and App are not sliced, the rest are.
  */
 export function isSliced(layerOrName: Folder | LayerName): boolean {
-  return !unslicedLayers.includes(
-    basename(typeof layerOrName === "string" ? layerOrName : layerOrName.path),
-  );
+  const name = typeof layerOrName === "string" ? layerOrName : layerOrName.path;
+  return !unslicedLayers.includes(removePrefix(basename(name)));
 }
 
 /**

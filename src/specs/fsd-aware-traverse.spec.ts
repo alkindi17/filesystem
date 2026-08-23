@@ -2,6 +2,7 @@ import { join } from "node:path";
 import { test, expect, describe } from "vitest";
 
 import {
+  getAllSegments,
   getAllSlices,
   getIndexes,
   getSlices,
@@ -150,6 +151,42 @@ test("isSliced", () => {
       children: [],
     }),
   ).toBe(true);
+});
+
+test("isSliced treats prefixed layers as their unprefixed counterparts", () => {
+  const prefixedLayer = (name: string): Folder => ({
+    type: "folder",
+    path: joinFromRoot("project", "src", name),
+    children: [],
+  });
+
+  expect(isSliced(prefixedLayer("_shared"))).toBe(false);
+  expect(isSliced(prefixedLayer("_app"))).toBe(false);
+  expect(isSliced(prefixedLayer("_entities"))).toBe(true);
+});
+
+test("getAllSegments traces segments of prefixed unsliced layers", () => {
+  const rootFolder = parseIntoFolder(`
+    📂 _app
+      📂 lib
+        📄 index.ts
+    📂 _shared
+      📂 ui
+        📄 index.ts
+  `);
+
+  const segments = getAllSegments(rootFolder).map(
+    ({ segmentName, sliceName, layerName }) => ({
+      segmentName,
+      sliceName,
+      layerName,
+    }),
+  );
+
+  expect(segments).toEqual([
+    { segmentName: "lib", sliceName: null, layerName: "app" },
+    { segmentName: "ui", sliceName: null, layerName: "shared" },
+  ]);
 });
 
 describe("getIndexes", () => {
